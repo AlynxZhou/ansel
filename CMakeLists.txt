@@ -495,6 +495,17 @@ endif()
 # materials under the default component and not under 'Unspecified'
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME DTApplication)
 
+# To prevent bundled exiv2 from creating its unstall target, we must create
+# uninstall target before it.
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
 # lets continue into build directories
 include(data/supported_extensions.cmake) # this file needs to be included first as it gets amended in bin/
 add_subdirectory(src "${DARKTABLE_BINDIR}") # directory needs to be there before data directory so that the correct CSS file gets installed
@@ -508,14 +519,5 @@ add_subdirectory(tools "${DARKTABLE_DATADIR}/tools")
 add_subdirectory(packaging)
 
 include(cmake/ansel-packaging.cmake)
-
-# uninstall target
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
-
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 feature_summary(WHAT ALL)

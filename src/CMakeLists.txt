@@ -422,30 +422,47 @@ foreach(lib ${OUR_LIBS} GIO GThread GModule PangoCairo Rsvg2 LibXml2 CURL PNG JP
   add_definitions(${${lib}_DEFINITIONS})
 endforeach(lib)
 
-# Require exiv2 >= 0.24 to make sure everything we need is available
-find_package(Exiv2 0.24 REQUIRED)
-include_directories(SYSTEM ${Exiv2_INCLUDE_DIRS})
-list(APPEND LIBS ${Exiv2_LIBRARIES})
-add_definitions(${Exiv2_DEFINITIONS})
+# If you are packaging for distros, and you are sure your system exiv2 is
+# has all features we need, disable this option.
+if(USE_INTERNAL_EXIV2)
+  # The actual build is in `external/CMakeLists.txt`.
+  list(APPEND LIBS exiv2lib)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/exiv2/include)
+  # For generated `exiv2_export.h`.
+  include_directories(${CMAKE_BINARY_DIR})
+  # If you use internal exiv2 here, you should already have ISOBMFF support so
+  # don't check it, just go!
+  if(USE_ISOBMFF)
+    add_definitions(-DHAVE_LIBEXIV2_WITH_ISOBMFF=1)
+    set(DT_SUPPORTED_EXTENSIONS ${DT_SUPPORTED_EXTENSIONS} cr3 CACHE INTERNAL "")
+    message(STATUS "Using internal Exiv2 with ISOBMFF support (CR3, AVIF, HEIF)")
+  endif()
+else()
+  # Require exiv2 >= 0.24 to make sure everything we need is available
+  find_package(Exiv2 0.24 REQURIED)
+  include_directories(SYSTEM ${Exiv2_INCLUDE_DIRS})
+  list(APPEND LIBS ${Exiv2_LIBRARIES})
+  add_definitions(${Exiv2_DEFINITIONS})
 
-# Optionally enable ISOBMFF support in Exiv2
-if (USE_ISOBMFF)
-  if(Exiv2_VERSION VERSION_GREATER_EQUAL "0.27.4")
-    # exiv2 >= 0.27.4 provides optional support for ISOBMFF files.
-    # This must be manually enabled during exiv2 build and can be checked with
-    # the EXV_ENABLE_BMFF symbol.
-    check_symbol_exists(EXV_ENABLE_BMFF
-      "${Exiv2_INCLUDE_DIRS}/exiv2/exv_conf.h"
-      HAVE_EXV_ENABLE_BMFF)
-    if(HAVE_EXV_ENABLE_BMFF)
-      add_definitions(-DHAVE_LIBEXIV2_WITH_ISOBMFF=1)
-      set(DT_SUPPORTED_EXTENSIONS ${DT_SUPPORTED_EXTENSIONS} cr3 CACHE INTERNAL "")
-      message(STATUS "Exiv2 >= 0.27.4 found with ISOBMFF support (CR3, AVIF, HEIF)")
+  # Optionally enable ISOBMFF support in Exiv2
+  if(USE_ISOBMFF)
+    if(Exiv2_VERSION VERSION_GREATER_EQUAL "0.27.4")
+      # exiv2 >= 0.27.4 provides optional support for ISOBMFF files.
+      # This must be manually enabled during exiv2 build and can be checked with
+      # the EXV_ENABLE_BMFF symbol.
+      check_symbol_exists(EXV_ENABLE_BMFF
+        "${Exiv2_INCLUDE_DIRS}/exiv2/exv_conf.h"
+        HAVE_EXV_ENABLE_BMFF)
+      if(HAVE_EXV_ENABLE_BMFF)
+        add_definitions(-DHAVE_LIBEXIV2_WITH_ISOBMFF=1)
+        set(DT_SUPPORTED_EXTENSIONS ${DT_SUPPORTED_EXTENSIONS} cr3 CACHE INTERNAL "")
+        message(STATUS "Exiv2 >= 0.27.4 found with ISOBMFF support (CR3, AVIF, HEIF)")
+      else()
+        message(STATUS "Exiv2 >= 0.27.4 found, but was not compiled with ISOBMFF support (CR3, AVIF, HEIF)")
+      endif()
     else()
-      message(STATUS "Exiv2 >= 0.27.4 found, but was not compiled with ISOBMFF support (CR3, AVIF, HEIF)")
+      message(STATUS "Exiv2 < 0.27.4 found, no support for ISOBMFF files (CR3, AVIF, HEIF)")
     endif()
-  else()
-    message(STATUS "Exiv2 < 0.27.4 found, no support for ISOBMFF files (CR3, AVIF, HEIF)")
   endif()
 endif()
 
@@ -752,6 +769,10 @@ list(APPEND LIBS ${Pugixml_LIBRARIES})
 
 if(NOT SOURCE_PACKAGE)
   add_definitions(-Werror -Wfatal-errors )
+  # FIXME: Exiv2 main branch dropped deprecated AutoPtr and uses UniquePtr, and
+  # the basecurve tool should also be updated, but currently I don't have time
+  # and just use 0.27 branch, also ignore deprecated errors.
+  add_definitions(-Wno-deprecated-declarations)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

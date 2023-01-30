@@ -17,3 +17,7 @@
 [submodule "src/external/LibRaw"]
 	path = src/external/LibRaw
 	url = https://github.com/LibRaw/LibRaw.git
+[submodule "src/external/exiv2"]
+	path = src/external/exiv2
+	url = https://github.com/Exiv2/exiv2.git
+	branch = 0.27-maintenance
